@@ -15,9 +15,18 @@ dependencies = [
     "setuptools>=80.9.0",
     "sounddevice>=0.5.2",
     "torchaudio>=2.6.0",
+    "nltk",
+    "langchain-google-genai",
+    "python-dotenv",
+    "rich",
     "langchain-openai",
     "pyttsx3",
+    "Flask",
 ]
+
+[tool.setuptools.packages.find]
+where = ["./"]
+include = ["architect"]
 
 [dependency-groups]
 dev = [

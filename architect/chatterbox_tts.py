@@ -120,3 +120,19 @@ class TextToSpeechService:
         """
         wav = self.model.generate(text, audio_prompt_path=audio_prompt_path)
         ta.save(output_path, wav, self.sample_rate)
+
+
+if __name__ == "__main__":
+    # Example usage
+    tts = TextToSpeechService()
+    text = "Hello, this is a test of the ChatterBox text-to-speech service."
+    sample_rate, audio_array = tts.synthesize(text)
+
+    # Play the audio
+    import sounddevice as sd
+    sd.play(audio_array, sample_rate)
+    sd.wait()
+
+    # Save the audio
+    ta.save("test_audio.wav", torch.from_numpy(audio_array).unsqueeze(0), sample_rate)
+    print("Audio saved to test_audio.wav")

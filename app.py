@@ -36,7 +36,7 @@ parser.add_argument("--exaggeration", type=float, default=0.5, help="Emotion exa
 parser.add_argument("--cfg-weight", type=float, default=0.5, help="CFG weight for pacing (0.0-1.0) (ChatterBox only)")
 parser.add_argument("--provider", type=str, default="ollama", choices=["ollama", "openai"], help="LLM provider to use (ollama or openai)")
 parser.add_argument("--ollama-model", type=str, default="gemma3", help="Ollama model to use")
-parser.add_argument("--openai-model", type=str, default="gpt-4o", help="OpenAI model to use")
+parser.add_argument("--openai-model", type=str, default="gpt-4o-mini", help="OpenAI model to use")
 parser.add_argument("--save-voice", action="store_true", help="Save generated voice samples (ChatterBox only)")
 args = parser.parse_args()
 
