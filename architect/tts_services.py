@@ -13,9 +13,10 @@ class PyTTSX3Service:
         return 0, np.array([]) # Return dummy values for compatibility
 
     def long_form_synthesize(self, text: str, **kwargs):
-        sentences = nltk.sent_tokenize(text)
-        for sentence in sentences:
-            self.engine.say(sentence)
+        try:
+            self.engine.say(text)
             self.engine.runAndWait()
-            time.sleep(0.1) # Small pause between sentences
+        except Exception as e:
+            print(f"Error during TTS synthesis: {e}")
+            
         return 0, np.array([]) # Return dummy values for compatibility
