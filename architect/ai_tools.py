@@ -27,16 +27,13 @@ def create_object(type: str, title: str, description: str, parent_id: str = None
     update_mermaid_diagram() # Automate diagram update
     return f"Created {type}: {title} (ID: {new_obj.id})"
 
-def update_object(obj_id: str, new_title: str = None, new_description: str = None):
-    """Update existing object with additional information. Provide either new_title or new_description, or both."""
+def update_object(obj_id: str, new_info: str):
+    """Update existing object with additional information"""
     project_data = get_project_data()
     if obj_id not in project_data["objects"]:
         return f"Error: Object with ID {obj_id} not found."
     
-    if new_title is not None:
-        project_data["objects"][obj_id]['title'] = new_title
-    if new_description is not None:
-        project_data["objects"][obj_id]['description'] = new_description
+    project_data["objects"][obj_id]['description'] += "\n" + new_info
         
     project_data["objects"][obj_id]['updated_at'] = datetime.utcnow().isoformat()
     save_project_data(project_data)

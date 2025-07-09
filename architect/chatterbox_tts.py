@@ -7,7 +7,7 @@ from chatterbox.tts import ChatterboxTTS
 
 warnings.filterwarnings(
     "ignore",
-    message="torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.",
+    message="torch.nn.utils.weight_norm isdeprecated in favor of torch.nn.utils.parametrizations.weight_norm.",
 )
 
 
@@ -57,39 +57,30 @@ class TextToSpeechService:
 
         torch.load = patched_torch_load
 
-    def synthesize(self, text: str, audio_prompt_path: str | None = None, exaggeration: float = 0.5, cfg_weight: float = 0.5):
+    def synthesize(self, text: str):
         """
         Synthesizes audio from the given text using ChatterBox TTS.
 
         Args:
             text (str): The input text to be synthesized.
-            audio_prompt_path (str, optional): Path to audio file for voice cloning. Defaults to None.
-            exaggeration (float, optional): Emotion exaggeration control (0-1). Defaults to 0.5.
-            cfg_weight (float, optional): Control for pacing and delivery. Defaults to 0.5.
 
         Returns:
             tuple: A tuple containing the sample rate and the generated audio array.
         """
         wav = self.model.generate(
-            text,
-            audio_prompt_path=audio_prompt_path,
-            exaggeration=exaggeration,
-            cfg_weight=cfg_weight
+            text
         )
 
         # Convert tensor to numpy array format compatible with sounddevice
         audio_array = wav.squeeze().cpu().numpy()
         return self.sample_rate, audio_array
 
-    def long_form_synthesize(self, text: str, audio_prompt_path: str | None = None, exaggeration: float = 0.5, cfg_weight: float = 0.5):
+    def long_form_synthesize(self, text: str):
         """
         Synthesizes audio from the given long-form text using ChatterBox TTS.
 
         Args:
             text (str): The input text to be synthesized.
-            audio_prompt_path (str, optional): Path to audio file for voice cloning. Defaults to None.
-            exaggeration (float, optional): Emotion exaggeration control (0-1). Defaults to 0.5.
-            cfg_weight (float, optional): Control for pacing and delivery. Defaults to 0.5.
 
         Returns:
             tuple: A tuple containing the sample rate and the generated audio array.
@@ -100,39 +91,8 @@ class TextToSpeechService:
 
         for sent in sentences:
             sample_rate, audio_array = self.synthesize(
-                sent,
-                audio_prompt_path=audio_prompt_path,
-                exaggeration=exaggeration,
-                cfg_weight=cfg_weight
+                sent
             )
             pieces += [audio_array] # Removed silence for continuous audio
 
         return self.sample_rate, np.concatenate(pieces)
-
-    def save_voice_sample(self, text: str, output_path: str, audio_prompt_path: str | None = None):
-        """
-        Saves a voice sample to file for later use as voice prompt.
-
-        Args:
-            text (str): The text to synthesize.
-            output_path (str): Path where to save the audio file.
-            audio_prompt_path (str, optional): Path to audio file for voice cloning.
-        """
-        wav = self.model.generate(text, audio_prompt_path=audio_prompt_path)
-        ta.save(output_path, wav, self.sample_rate)
-
-
-if __name__ == "__main__":
-    # Example usage
-    tts = TextToSpeechService()
-    text = "Hello, this is a test of the ChatterBox text-to-speech service."
-    sample_rate, audio_array = tts.synthesize(text)
-
-    # Play the audio
-    import sounddevice as sd
-    sd.play(audio_array, sample_rate)
-    sd.wait()
-
-    # Save the audio
-    ta.save("test_audio.wav", torch.from_numpy(audio_array).unsqueeze(0), sample_rate)
-    print("Audio saved to test_audio.wav")

@@ -100,7 +100,8 @@ OBJECT CREATION STRATEGY:
 - Listen for key project elements in conversation
 - ALWAYS begin by using `show_project_summary` to understand the current state and available object IDs.
 - Create objects immediately when you have enough information.
-- Before creating a new object, check if a similar object already exists in the `show_project_summary` output. If it does, use `update_object` with its existing ID and specify `new_title` or `new_description` as appropriate.
+- To change an object's *title*, use `update_object` with its ID and the `new_title` parameter (e.g., `update_object(obj_id="metric-xyz", new_title="New Metric Title")`).
+- To change an object's *description*, use `update_object` with its ID and the `new_description` parameter (e.g., `update_object(obj_id="problem-abc", new_description="Updated description text.")`).
 - When a relationship between objects is implied or discussed, IMMEDIATELY use the `link_objects` tool with the exact IDs from `show_project_summary` and a precise relationship type.
   - Specifically, when creating a `Task`, always link it to the `Solution` it is part of (using `broken into`) and any `Resource` it requires (using `requires`). Ask follow-up questions if this information is not provided.
   - For Risks, consider linking Solutions that `mitigate` them, or Tasks that are `mitigation task`s.
@@ -251,14 +252,8 @@ def listen_for_interrupt_thread(stop_event):
 # --- CLI Interface ---
 def main():
     parser = argparse.ArgumentParser(description="Architect AI Voice Assistant")
-    parser.add_argument("--project-name", type=str, default="default_project", help="The name of the project to work on.")
     parser.add_argument("--tts-provider", type=str, default="pyttsx3", choices=["chatterbox", "pyttsx3"], help="TTS provider to use.")
-    parser.add_argument("--voice", type=str, help="Path to voice sample for cloning (ChatterBox only).")
-    parser.add_argument("--exaggeration", type=float, default=0.5, help="Emotion exaggeration (0.0-1.0) (ChatterBox only).")
-    parser.add_argument("--cfg-weight", type=float, default=0.5, help="CFG weight for pacing (0.0-1.0) (ChatterBox only).")
-    parser.add_argument("--provider", type=str, default="openai", choices=["openai"], help="LLM provider to use.")
-    parser.add_argument("--openai-model", type=str, default="gpt-4o", help="OpenAI model to use.")
-    parser.add_argument("--save-voice", action="store_true", help="Save generated voice samples (ChatterBox only).")
+    parser.add_argument("--project-name", type=str, default="default_project", help="The name of the project to work on.")
     args = parser.parse_args()
 
     console.print(Panel("️ Welcome to Architect! Let's plan your project.", title="[bold green]Architect AI[/bold green]"))
@@ -273,8 +268,8 @@ def main():
         tts = PyTTSX3Service()
 
     # Initialize LLM
-    llm = ChatOpenAI(model=args.openai_model)
-    console.print(f"[blue]LLM provider: OpenAI (model: {args.openai_model})")
+    llm = ChatOpenAI(model="gpt-4o-mini") # Default to gpt-4o
+    console.print(f"[blue]LLM provider: OpenAI (model: gpt-4o-mini)")
 
     agent_with_history = get_agent_executor(llm)
 
@@ -317,26 +312,10 @@ def main():
                     console.print(f"[cyan]Architect:[/cyan] {response_text}")
 
                     if args.tts_provider == "chatterbox":
-                        dynamic_exaggeration = analyze_emotion(response_text)
-                        dynamic_cfg = args.cfg_weight * 0.8 if dynamic_exaggeration > 0.6 else args.cfg_weight
                         sample_rate, audio_array = tts.long_form_synthesize(
-                            response_text,
-                            audio_prompt_path=args.voice,
-                            exaggeration=dynamic_exaggeration,
-                            cfg_weight=dynamic_cfg
+                            response_text
                         )
-                        if args.save_voice:
-                            response_count += 1
-                            filename = f"voices/response_{response_count:03d}.wav"
-                            tts.save_voice_sample(response_text, filename, args.voice)
-                            console.print(f"[dim]Voice saved to: {filename}[/dim]")
-                        
-                        # Play audio interruptibly
-                        stop_ai_speaking_event.clear()
-                        interrupt_thread = threading.Thread(target=listen_for_interrupt_thread, args=(stop_ai_speaking_event,))
-                        interrupt_thread.start()
                         play_audio_interruptible(sample_rate, audio_array, stop_ai_speaking_event)
-                        interrupt_thread.join(timeout=0.1) # Give a moment for thread to exit if it did
 
                         if stop_ai_speaking_event.is_set():
                             console.print("[yellow]AI speech interrupted. Press Enter to start recording your response.[/yellow]")
