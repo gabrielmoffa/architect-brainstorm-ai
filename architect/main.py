@@ -20,8 +20,8 @@ from langchain.tools import tool
 
 # Local imports
 from . import ai_tools
-from .tts_services import PyTTSX3Service
-from .chatterbox_tts import TextToSpeechService
+from app import PyTTSX3Service
+
 
 # Load environment variables
 load_dotenv()
@@ -252,10 +252,8 @@ def listen_for_interrupt_thread(stop_event):
 def main():
     parser = argparse.ArgumentParser(description="Architect AI Voice Assistant")
     parser.add_argument("--project-name", type=str, default="default_project", help="The name of the project to work on.")
-    parser.add_argument("--tts-provider", type=str, default="pyttsx3", choices=["chatterbox", "pyttsx3"], help="TTS provider to use.")
-    parser.add_argument("--voice", type=str, help="Path to voice sample for cloning (ChatterBox only).")
-    parser.add_argument("--exaggeration", type=float, default=0.5, help="Emotion exaggeration (0.0-1.0) (ChatterBox only).")
-    parser.add_argument("--cfg-weight", type=float, default=0.5, help="CFG weight for pacing (0.0-1.0) (ChatterBox only).")
+    parser.add_argument("--tts-provider", type=str, default="pyttsx3", choices=["pyttsx3"], help="TTS provider to use.")
+    
     parser.add_argument("--provider", type=str, default="openai", choices=["openai"], help="LLM provider to use.")
     parser.add_argument("--openai-model", type=str, default="gpt-4o", help="OpenAI model to use.")
     parser.add_argument("--save-voice", action="store_true", help="Save generated voice samples (ChatterBox only).")
@@ -267,10 +265,7 @@ def main():
     ai_tools.PROJECT_NAME = args.project_name
 
     # Initialize TTS
-    if args.tts_provider == "chatterbox":
-        tts = TextToSpeechService()
-    else:
-        tts = PyTTSX3Service()
+    tts = PyTTSX3Service()
 
     # Initialize LLM
     llm = ChatOpenAI(model=args.openai_model)
@@ -316,36 +311,8 @@ def main():
 
                     console.print(f"[cyan]Architect:[/cyan] {response_text}")
 
-                    if args.tts_provider == "chatterbox":
-                        dynamic_exaggeration = analyze_emotion(response_text)
-                        dynamic_cfg = args.cfg_weight * 0.8 if dynamic_exaggeration > 0.6 else args.cfg_weight
-                        sample_rate, audio_array = tts.long_form_synthesize(
-                            response_text,
-                            audio_prompt_path=args.voice,
-                            exaggeration=dynamic_exaggeration,
-                            cfg_weight=dynamic_cfg
-                        )
-                        if args.save_voice:
-                            response_count += 1
-                            filename = f"voices/response_{response_count:03d}.wav"
-                            tts.save_voice_sample(response_text, filename, args.voice)
-                            console.print(f"[dim]Voice saved to: {filename}[/dim]")
-                        
-                        # Play audio interruptibly
-                        stop_ai_speaking_event.clear()
-                        interrupt_thread = threading.Thread(target=listen_for_interrupt_thread, args=(stop_ai_speaking_event,))
-                        interrupt_thread.start()
-                        play_audio_interruptible(sample_rate, audio_array, stop_ai_speaking_event)
-                        interrupt_thread.join(timeout=0.1) # Give a moment for thread to exit if it did
-
-                        if stop_ai_speaking_event.is_set():
-                            console.print("[yellow]AI speech interrupted. Press Enter to start recording your response.[/yellow]")
-                        else:
-                            console.print("[green]AI finished speaking. Press Enter to start recording your response.[/green]")
-
-                    else: # pyttsx3
-                        tts.long_form_synthesize(response_text)
-                        console.print("[green]AI finished speaking (pyttsx3 is not interruptible). Press Enter to start recording your response.[/green]")
+                    tts.long_form_synthesize(response_text)
+                    console.print("[green]AI finished speaking (pyttsx3 is not interruptible). Press Enter to start recording your response.[/green]")
             else:
                 console.print("[red]No audio recorded. Please ensure your microphone is working.")
 

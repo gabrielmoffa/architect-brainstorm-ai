@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_ollama import OllamaLLM
-from tts import TextToSpeechService
+
 import pyttsx3
 
 class PyTTSX3Service:
@@ -24,6 +24,15 @@ class PyTTSX3Service:
         self.engine.runAndWait()
         return 0, np.array([]) # Return dummy values for compatibility
 
+    def long_form_synthesize(self, text: str, **kwargs):
+        import nltk
+        sentences = nltk.sent_tokenize(text)
+        for sentence in sentences:
+            self.engine.say(sentence)
+            self.engine.runAndWait()
+            time.sleep(0.1) # Small pause between sentences
+        return 0, np.array([]) # Return dummy values for compatibility
+
 
 console = Console()
 stt = whisper.load_model("base.en")
@@ -31,9 +40,7 @@ stt = whisper.load_model("base.en")
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="Local Voice Assistant with ChatterBox TTS")
 parser.add_argument("--tts-provider", type=str, default="chatterbox", choices=["chatterbox", "pyttsx3"], help="TTS provider to use (chatterbox or pyttsx3)")
-parser.add_argument("--voice", type=str, help="Path to voice sample for cloning (ChatterBox only)")
-parser.add_argument("--exaggeration", type=float, default=0.5, help="Emotion exaggeration (0.0-1.0) (ChatterBox only)")
-parser.add_argument("--cfg-weight", type=float, default=0.5, help="CFG weight for pacing (0.0-1.0) (ChatterBox only)")
+
 parser.add_argument("--provider", type=str, default="ollama", choices=["ollama", "openai"], help="LLM provider to use (ollama or openai)")
 parser.add_argument("--ollama-model", type=str, default="gemma3", help="Ollama model to use")
 parser.add_argument("--openai-model", type=str, default="gpt-4o-mini", help="OpenAI model to use")
@@ -41,12 +48,7 @@ parser.add_argument("--save-voice", action="store_true", help="Save generated vo
 args = parser.parse_args()
 
 # Initialize TTS based on provider
-if args.tts_provider == "chatterbox":
-    tts = TextToSpeechService()
-elif args.tts_provider == "pyttsx3":
-    tts = PyTTSX3Service()
-else:
-    raise ValueError("Invalid TTS provider specified. Choose 'chatterbox' or 'pyttsx3'.")
+tts = PyTTSX3Service()
 
 # Modern prompt template using ChatPromptTemplate
 prompt_template = ChatPromptTemplate.from_messages([
@@ -245,31 +247,10 @@ if __name__ == "__main__":
                     # Use lower cfg_weight for more expressive responses
                     dynamic_cfg = args.cfg_weight * 0.8 if dynamic_exaggeration > 0.6 else args.cfg_weight
 
-                    if args.tts_provider == "chatterbox":
-                        sample_rate, audio_array = tts.long_form_synthesize(
-                            response,
-                            audio_prompt_path=args.voice,
-                            exaggeration=dynamic_exaggeration,
-                            cfg_weight=dynamic_cfg
-                        )
-                    elif args.tts_provider == "pyttsx3":
-                        # pyttsx3 handles audio playback internally
-                        tts.synthesize(response)
-                        sample_rate, audio_array = 0, np.array([]) # Dummy values
+                    tts.long_form_synthesize(response)
 
                 console.print(f"[cyan]Assistant: {response}")
-                if args.tts_provider == "chatterbox":
-                    console.print(f"[dim](Emotion: {dynamic_exaggeration:.2f}, CFG: {dynamic_cfg:.2f})[/dim]")
-
-                # Save voice sample if requested (ChatterBox only)
-                if args.save_voice and args.tts_provider == "chatterbox":
-                    response_count += 1
-                    filename = f"voices/response_{response_count:03d}.wav"
-                    tts.save_voice_sample(response, filename, args.voice)
-                    console.print(f"[dim]Voice saved to: {filename}[/dim]")
-
-                if args.tts_provider == "chatterbox":
-                    play_audio(sample_rate, audio_array)
+                
             else:
                 console.print(
                     "[red]No audio recorded. Please ensure your microphone is working."
