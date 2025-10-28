@@ -1,3 +1,5 @@
+### Discontinued project, may not work as expected, a bit of Claude Code magic and will work as expected :) 
+
 ### How to Use the Architect AI
 
 To start a conversation with the Architect AI and begin planning your project:
